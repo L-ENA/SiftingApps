@@ -1,5 +1,5 @@
 import re
-
+from googlenewsdecoder import new_decoderv1
 from google_news_feed import GoogleNewsFeed
 from gnews import GNews
 
@@ -27,24 +27,29 @@ def alternative_fulltext(link):
 
 def get_fulltext(link,article_scraper):
 
-    article = article_scraper.get_full_article(link)
+    res=decode_new(link)#resolved link
+    article = article_scraper.get_full_article(res)
     try:
-        return article.text
+        return article.text, res
     except:
         pass
 
     try:
-        return alternative_fulltext(link)
+        return alternative_fulltext(link), res
     except:
         #print("Error with URL: {}".format(link))
-        return "Please see link for full text"
+        return "Please see link for full text", res
 
 def all_fulltexts(df, link_field="link", output_field="fulltext"):
     article_scraper = GNews()
     text_column=[]
+    resolved_links=[]
     for l in tqdm(list(df[link_field])):
-        text_column.append(get_fulltext(l,article_scraper))
+        ftxt,newlink=get_fulltext(l,article_scraper)
+        resolved_links.append(newlink)
+        text_column.append(ftxt)
     df[output_field]=text_column
+    df["resolved_links"]=resolved_links
     return df
 
 #print(get_fulltext('https://accounts.google.com/ServiceLogin?hl=en-US&continue=https://news.google.com/rss/articles/CBMiemh0dHBzOi8vd3d3Lm1hcmt0ZWNocG9zdC5jb20vMjAyNC8wMy8zMS9tb2R1bGFyLW9wZW4tc291cmNlcy1tb2pvLXRoZS1wcm9ncmFtbWluZy1sYW5ndWFnZS10aGF0LXR1cm5zLXB5dGhvbi1pbnRvLWEtYmVhc3Qv0gF-aHR0cHM6Ly93d3cubWFya3RlY2hwb3N0LmNvbS8yMDI0LzAzLzMxL21vZHVsYXItb3Blbi1zb3VyY2VzLW1vam8tdGhlLXByb2dyYW1taW5nLWxhbmd1YWdlLXRoYXQtdHVybnMtcHl0aG9uLWludG8tYS1iZWFzdC8_YW1w?oc%3D5&gae=cb-', article_scraper))
@@ -55,10 +60,47 @@ def postprocess_link(l):
         l=l[:-1]
     return l
 
-def decode_url(google_url):
+
+def decode_new(source_url):
+
+    interval_time = 2 # default interval is 1 sec, if not specified
+    time.sleep(1.5)
+    #source_url = "https://news.google.com/read/CBMi2AFBVV95cUxPd1ZCc1loODVVNHpnbFFTVHFkTG94eWh1NWhTeE9yT1RyNTRXMVV2S1VIUFM3ZlVkVjl6UHh3RkJ0bXdaTVRlcHBjMWFWTkhvZWVuM3pBMEtEdlllRDBveGdIUm9GUnJ4ajd1YWR5cWs3VFA5V2dsZnY1RDZhVDdORHRSSE9EalF2TndWdlh4bkJOWU5UMTdIV2RCc285Q2p3MFA4WnpodUNqN1RNREMwa3d5T2ZHS0JlX0MySGZLc01kWDNtUEkzemtkbWhTZXdQTmdfU1JJaXY?hl=en-US&gl=US&ceid=US%3Aen"
+
+    try:
+        lnk = source_url.replace("https://accounts.google.com/ServiceLogin?hl=en-US&continue=", "")
+        decoded_url = new_decoderv1(lnk, interval=interval_time)
+        if decoded_url.get("status"):
+            print("Decoded URL:", decoded_url["decoded_url"])
+            resolved = decoded_url["decoded_url"]
+
+        else:
+            print("Error:", decoded_url["message"])
+            resolved = ""
+
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        resolved= ""
+    return resolved
+
+    # try:
+    #     decoded_url = new_decoderv1(source_url, interval=interval_time)
+    #     if decoded_url.get("status"):
+    #         print("Decoded URL:", decoded_url["decoded_url"])
+    #     else:
+    #         print("Error:", decoded_url["message"])
+    #         return source_url
+    # except Exception as e:
+    #     print(f"Error occurred: {e}")
+    #     return source_url
+    # return decoded_url["decoded_url"]
+
+def decode_url(google_url):#OLD and obsolete, use new function above.
+    print(google_url)
     try:
         base64_url = google_url.split("https://news.google.com/rss/articles/")[1].split("?")[0]
     except:
+        print("error in decoding base64 URL")
         return google_url
     # print(type(base64_url))
     missing_padding = len(base64_url) % 4
@@ -67,10 +109,11 @@ def decode_url(google_url):
 
     try:
         actual_url=base64.b64decode(base64_url)[4:].decode('utf-8', "backslashreplace").split('\\')[0]
-    except:
-        #print("Error with {}".format(base64_url))
-        actual_url=google_url
 
+    except:
+        print("Error with {}".format(base64_url))
+        actual_url=google_url
+    print(actual_url)
     return postprocess_link(actual_url)
 
 def get_feed(myquery, starter):
@@ -94,7 +137,8 @@ def feed_to_df(res):
 
         row={}
         row["link_original"]=news_item.link
-        row["link"] = decode_url(news_item.link)
+        #row["link"],xyz = decode_new(news_item.link)
+        row["link"] = news_item.link
         row["description"] = news_item.description
         row["title"] = news_item.title
         row["pubDate"] = news_item.pubDate
@@ -158,9 +202,10 @@ def get_results(df, results, max_results,q):
             thisrank = int((i + 10) / 10)  # simulating paging: to rank relevance, all refernce on a specific page are assumed to be equally relevant, they are less relevant than the articles from the previous page, and more relevant then the articles from the next page
 
             if existing == False:  # the article is not yet present in the results
-
+                reslink=False
                 if "[Yes]" in st.session_state.fulltexts:
-                    fulltxt = get_fulltext(li, article_scraper)
+                    fulltxt,reslink=get_fulltext(li, article_scraper)
+
                 else:
                     fulltxt="Not retrieved"
 
@@ -169,6 +214,7 @@ def get_results(df, results, max_results,q):
                     'description': des,
                     'media': row["source"].strip(),
                     "decision": " ",
+                    "resolved_link":"",
                     'link': li,
                     'date': str(row["pubDate"]).strip(),
                     "fulltext": fulltxt[:30000],
@@ -177,6 +223,8 @@ def get_results(df, results, max_results,q):
                     'appearances': 1,
                     'queries':[q]
                 }
+                if reslink:
+                    results[key]["resolved_link"]=reslink
             else:  # this article has already been retrieved! So we just check if here it has a better rank, and increment its appearances. Having appeared before is a good thing, so we need tomake sure that the article gets bumped up later in the search results
                 rank = results[key][
                     'min_page']  # if this is part of a boolean search then we record the minimum page; the idea is that more relevant search results appear earlier
@@ -217,6 +265,67 @@ def scanar_retrieval():
     st.session_state.all_res=pd.DataFrame([v for v in results.values()])
     st.session_state.all_res = st.session_state.all_res.sort_values(by=['min_page', 'appearances'],ascending=[True, False])  # the ranking algorithm
     st.session_state.all_searchdoc = pd.DataFrame([v for v in mysearches.values()])
+def scrape_separate():
+    article_scraper=GNews()
+    maxtexts = 3000
+    mydat = pd.read_csv(r"H:\Downloads\quantum_articles_full.csv").fillna("")
+    print(mydat.shape)
+    links = mydat["resolved links"]
+
+    fulltexts = mydat["fulltext"]
+    for i, lnk in enumerate(tqdm(links)):
+        if i < maxtexts and lnk != "" and fulltexts[i]== "":
+            print(lnk)
+            fulltexts[i]=get_fulltext(lnk,article_scraper)[:30000]
+        # else:
+        #     fulltexts[i]="Please see link for full text"
+        if i%50==0:
+
+            mydat["fulltext"] = fulltexts
+            mydat.to_csv(r"H:\Downloads\quantum_articles_full_scraped.csv", index=False)
+    mydat["fulltext"]=fulltexts
+    mydat.to_csv(r"H:\Downloads\quantum_articles_full_scraped.csv", index=False)
+
+def decode_separate():
+    article_scraper = GNews()
+    maxtexts=3000
+    interval_time = 2
+    mydat=pd.read_csv(r"H:\Downloads\quantum_articles_SCRAPED.csv").fillna("")
+    links=mydat["link"]
+    resolved=mydat["resolved links"]
+    fulltexts = mydat["fulltext"]
+
+    for i, lnk in enumerate(tqdm(links)):
+        if i <maxtexts and resolved[i]== "":
+            time.sleep(2)
+            try:
+                lnk=lnk.replace("https://accounts.google.com/ServiceLogin?hl=en-US&continue=", "")
+                decoded_url = new_decoderv1(lnk, interval=interval_time)
+                if decoded_url.get("status"):
+                    print("Decoded URL:", decoded_url["decoded_url"])
+                    resolved[i]=decoded_url["decoded_url"]
+                    fulltexts[i], = get_fulltext(lnk, article_scraper)[:30000]
+                else:
+                    print(str(i), " iteration: Error:", decoded_url["message"])
+                    resolved[i]=""
+                    fulltexts[i] = "Please see link for full text"
+            except Exception as e:
+                print(f"Error occurred: {e}")
+                resolved[i]=""
+                fulltexts[i] = "Please see link for full text"
+
+
+        if i%200==0:
+            mydat["resolved links"] = resolved
+            mydat["fulltext"] = fulltexts
+            mydat.to_csv(r"H:\Downloads\quantum_articles_full.csv")
 
 
 
+    print(mydat.shape)
+    mydat["resolved links"]=resolved
+    mydat["fulltext"] = fulltexts
+    print(resolved)
+    mydat.to_csv(r"H:\Downloads\quantum_articles_full.csv")
+
+#scrape_separate()
