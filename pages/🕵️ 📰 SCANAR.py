@@ -36,7 +36,7 @@ def get_queries():
 
 def get_parameters():
     st.write("## Step 2: Adjust your search and outputs")
-
+    st.write("Please consider that SCANAR will retrieve news up until today - which means that today's retrieval is likely incomplete. E.g. if you carry out a 1-week search on a Tuesday, SCANAR will retrieve complete results from Monday-Monday and you can decide what to do with your partial Tuesday results by filtering them in your downloaded spreadsheet. SCANAR retrieves data as provided by Google News, which may lead to older search results being included. These can similarly be removed by sorting the resulting spreadsheet on the date column.")
     dt = datetime.now() # per default, the news will be retrieved from a timeframe srarting 1 year ago.
     st.session_state.dt=dt
     oneyr = dt.replace(year=dt.year - 1)
@@ -147,7 +147,7 @@ def get_news_data():
         st.dataframe(st.session_state.all_res)
         st.dataframe(st.session_state.all_searchdoc)
 
-st.image(r"C:\Users\c1049033\PycharmProjects\phd_apps\imgs\IO2.jpg")
+# st.image(r"C:\Users\c1049033\PycharmProjects\phd_apps\imgs\IO2.jpg")
 #my_authenticator()
 if st.session_state["authentication_status"]:
 
