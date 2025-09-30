@@ -5,6 +5,7 @@ from io import StringIO
 from streamlit.components.v1 import html
 from datetime import datetime,date
 from scanar_utils import scanar_retrieval
+import datetime as DT
 
 if "querylist" not in st.session_state:
     st.session_state["querylist"]=None
@@ -36,13 +37,24 @@ def get_queries():
 def get_parameters():
     st.write("## Step 2: Adjust your search and outputs")
 
-    dt = datetime.now()  # per default, the news will be retrieved from a timeframe srarting 1 year ago.
+    dt = datetime.now() # per default, the news will be retrieved from a timeframe srarting 1 year ago.
     st.session_state.dt=dt
     oneyr = dt.replace(year=dt.year - 1)
     twoyr = dt.replace(year=dt.year - 2)
 
+    today = date.today()
+    onewk = today - DT.timedelta(days=7)
+    #onewk= dt.replace(week=dt.week - 1)
+    if dt.month > 1:
+        onemo = dt.replace(month=dt.month - 1)
+    else:
+        onemo = dt.replace(year=dt.year - 1)
+
+        onemo = onemo.replace(month=12)
+
     if dt.month > 6:
         sixmo = dt.replace(month=dt.month - 6)
+
     else:
         sixmo = dt.replace(year=dt.year - 1)
         left = 6 - sixmo.month
@@ -53,10 +65,15 @@ def get_parameters():
     st.write('&nbsp;')  # empty line
     st.session_state.timeframe = st.radio(
         "**Retrieve articles published/updated between now and which start date?**",
-        ["6 Months ago", ":rainbow[1 year ago]", "2 years ago"], index=1,
-        captions=[sixmo.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), oneyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), twoyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y')])
+        ["1 Week ago","1 Month ago", ":rainbow[6 Months ago]", "1 year ago", "2 years ago"], index=2,
+        captions=[onewk.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'),onemo.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'),sixmo.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), oneyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), twoyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y')])
+    #
     if st.session_state.timeframe == "6 Months ago":
         st.session_state.dates=sixmo
+    elif st.session_state.timeframe == "1 Week ago":
+        st.session_state.dates = onewk
+    elif st.session_state.timeframe == "1 Month ago":
+        st.session_state.dates = onemo
     elif st.session_state.timeframe == "2 years ago":
         st.session_state.dates = twoyr
     else:
@@ -91,11 +108,12 @@ def ris_converter():
         ref = {'TY': atype,
                'id': i,
                'TI': row["title"],  # title of the news article
+               'AB': row["fulltext"][:2000],  # title of the news article
                "T2": row["media"],  # the newspaper or source publishing this article
                "AU": row["media"].replace(",", " ").replace("  ", " ").strip()+",",  # the newspaper or source publishing this article
                # 'AB': row["description"],#potentially the scraped text could be added as abstract, but I decided to keep it slim for now because the abstract won't appear in the citation.
                "PY": pyr,  # year of publication of the article
-               "UR": row["link"],
+               "UR": row["resolved_link"],
                # the link to the news article. my news api sometimes appends some crappy appendix to the URL, thus the splitting function.
                "Y2": date_downloaded,  # last accessed info
                "N1": "Last accessed: {}; date article published: {}/{}/{}".format(date_downloaded, pday, pmon, pyr)
@@ -129,9 +147,11 @@ def get_news_data():
         st.dataframe(st.session_state.all_res)
         st.dataframe(st.session_state.all_searchdoc)
 
-my_authenticator()
+st.image(r"C:\Users\c1049033\PycharmProjects\phd_apps\imgs\IO2.jpg")
+#my_authenticator()
 if st.session_state["authentication_status"]:
-    st.markdown('''# 🕵️ 📰  :rainbow[SCANAR]: :rainbow[S]earch :rainbow[C]ompanion for :rainbow[A]dvanced :rainbow[N]ews :rainbow[A]rticle :rainbow[R]etrieval''')
+
+    st.markdown('''# :rainbow[SCANAR]: :rainbow[S]earch :rainbow[C]ompanion for :rainbow[A]dvanced :rainbow[N]ews :rainbow[A]rticle :rainbow[R]etrieval''')
 
     st.write('&nbsp;')#empty line
     st.write("## Step 1: Upload a text file")
