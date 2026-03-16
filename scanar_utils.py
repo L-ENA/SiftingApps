@@ -64,7 +64,7 @@ def postprocess_link(l):
 def decode_new(source_url):
 
     interval_time = 2 # default interval is 1 sec, if not specified
-    time.sleep(1.5)
+    time.sleep(1.0)
     #source_url = "https://news.google.com/read/CBMi2AFBVV95cUxPd1ZCc1loODVVNHpnbFFTVHFkTG94eWh1NWhTeE9yT1RyNTRXMVV2S1VIUFM3ZlVkVjl6UHh3RkJ0bXdaTVRlcHBjMWFWTkhvZWVuM3pBMEtEdlllRDBveGdIUm9GUnJ4ajd1YWR5cWs3VFA5V2dsZnY1RDZhVDdORHRSSE9EalF2TndWdlh4bkJOWU5UMTdIV2RCc285Q2p3MFA4WnpodUNqN1RNREMwa3d5T2ZHS0JlX0MySGZLc01kWDNtUEkzemtkbWhTZXdQTmdfU1JJaXY?hl=en-US&gl=US&ceid=US%3Aen"
 
     try:
@@ -225,6 +225,8 @@ def get_results(df, results, max_results,q):
                 }
                 if reslink:
                     results[key]["resolved_link"]=reslink
+                else:
+                    results[key]["resolved_link"] = li
             else:  # this article has already been retrieved! So we just check if here it has a better rank, and increment its appearances. Having appeared before is a good thing, so we need tomake sure that the article gets bumped up later in the search results
                 rank = results[key][
                     'min_page']  # if this is part of a boolean search then we record the minimum page; the idea is that more relevant search results appear earlier

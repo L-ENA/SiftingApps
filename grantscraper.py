@@ -4,12 +4,14 @@ from scanar_utils import get_fulltext
 from gnews import GNews
 import time
 
-path=r"C:\Users\c1049033\PycharmProjects\ncl_medx\data\MRC_full.csv"
+path=r"C:\Users\c1049033\Documents\ScanDatasets\formatted\womans_health_funding.csv"
 
 def get_link(inp, linktype="gtr"):
     try:
         if linktype=="gtr":
-            return "https://gtr.ukri.org/projects?ref="+inp.split("ref=")[1]
+            l="https://gtr.ukri.org/projects?ref="+inp.split("ref=")[1]
+            print(l)
+            return l
     except:
         print("Error with type {} link: {}".format(linktype, inp))
 
@@ -21,13 +23,17 @@ def scrape_csv(path, linkcol):
         if i%20==0:
             time.sleep(2)
         lnk=get_link(row[linkcol])
-        txts.append(get_fulltext(lnk,article_scraper)[:25000])
+        try:
+            txts.append(article_scraper.get_full_article(lnk).text[:25000])
+        except:
+            txts.append("")
         if i%50 ==0:
             txtdf=pd.DataFrame()
             txtdf["backup"]=txts
             txtdf.to_csv(r"C:\Users\c1049033\PycharmProjects\ncl_medx\data\backup.csv")
     df["Fulltext"]=txts
-    df.to_csv(r"C:\Users\c1049033\PycharmProjects\ncl_medx\data\mrc_scraped.csv", index=False)
+    df.to_csv(path, index=False)
+
 def postprocess_text(path, textcol):
     prepped=[]
     df=pd.read_csv(path).fillna("")
@@ -44,6 +50,6 @@ def postprocess_text(path, textcol):
     df[textcol]=prepped
     df.to_csv(path)
 
-#scrape_csv(path, "GTRProjectUrl")
-postprocess_text(r"C:\Users\c1049033\PycharmProjects\ncl_medx\data\mrc_scraped.csv", "Fulltext")
+scrape_csv(path, "GTRProjectUrl")
+postprocess_text(path, "Fulltext")
 

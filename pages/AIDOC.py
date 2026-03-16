@@ -19,7 +19,7 @@ def reset_aidoc_session():
     st.session_state.initialised=False
     st.session_state.lastcol=""
 
-my_authenticator()
+#my_authenticator()
 
 def reorder_me():
     st.session_state.mydf.sort_index(inplace=True)
