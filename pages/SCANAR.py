@@ -43,7 +43,7 @@ def get_parameters():
     twoyr = dt.replace(year=dt.year - 2)
 
     today = date.today()
-    onewk = today - DT.timedelta(days=8)
+    onewk = today - DT.timedelta(days=7)
     #onewk= dt.replace(week=dt.week - 1)
     # if dt.day == 31:
     #     dt=dt.replace(day=30)
