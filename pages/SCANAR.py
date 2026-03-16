@@ -45,8 +45,8 @@ def get_parameters():
     today = date.today()
     onewk = today - DT.timedelta(days=8)
     #onewk= dt.replace(week=dt.week - 1)
-    if dt.day == 31:
-        dt=dt.replace(day=30)
+    # if dt.day == 31:
+    #     dt=dt.replace(day=30)
     if dt.month > 1:
         onemo = dt.replace(month=dt.month - 1)
     else:
