@@ -1,6 +1,11 @@
-#streamlit run C:\Users\c1049033\PycharmProjects\phd_apps\Welcome.py
+#streamlit run pathto\PycharmProjects\phd_apps\Welcome.py
 import streamlit as st
 from utils import my_authenticator
+from pathlib import Path
+
+
+BASE_DIR = Path(__file__).resolve().parent
+IMAGE = BASE_DIR / "imgs" / "IO2.jpg"
 
 
 
@@ -8,7 +13,10 @@ from utils import my_authenticator
 st.session_state["authentication_status"]=True
 
 if st.session_state["authentication_status"]:
-    st.image(r"C:\Users\c1049033\PycharmProjects\phd_apps\imgs\IO2.jpg")
+    if IMAGE.exists():
+        st.image(IMAGE)
+    else:
+        st.error(f"Image not found: {IMAGE}")
 
     st.markdown("# Horizon Scanning Tool Prototypes")
     st.write("Select a tool from the navigation pane on the left side of the screen. ")
