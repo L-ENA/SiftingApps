@@ -36,56 +36,77 @@ def get_queries():
 
 def get_parameters():
     st.write("## Step 2: Adjust your search and outputs")
-    st.write("Please consider that SCANAR will retrieve news up until today - which means that today's retrieval is likely incomplete. E.g. if you carry out a 1-week search on a Tuesday, SCANAR will retrieve results for 8 days including complete results for last Tuesday to this Monday (yesterday) which is 7 full days + partial results for today Tuesday. You can decide what to do with your partial today results by filtering them in your downloaded spreadsheet. SCANAR retrieves data as provided by Google News, which may lead to older search results being included. These can similarly be removed by sorting the resulting spreadsheet on the date column.")
-    dt = datetime.now() # per default, the news will be retrieved from a timeframe srarting 1 year ago.
-    st.session_state.dt=dt
-    oneyr = dt.replace(year=dt.year - 1)
-    twoyr = dt.replace(year=dt.year - 2)
+    st.write(
+        "Please consider that SCANAR will retrieve news up until today - which means that "
+        "today's retrieval is likely incomplete. E.g. if you carry out a 1-week search on a "
+        "Tuesday, SCANAR will retrieve from the previous Tuesday up until now."
+    )
 
-    today = date.today()
+    # Local import keeps this function self-contained if needed
+    from dateutil.relativedelta import relativedelta
+
+    # Keep datetime for timestamping output files, etc.
+    dt = datetime.now()
+    st.session_state.dt = dt
+
+    # Use date objects for date-range inputs
+    today = dt.date()
+
+    # Safe, calendar-aware ranges
     onewk = today - DT.timedelta(days=7)
-    #onewk= dt.replace(week=dt.week - 1)
-    # if dt.day == 31:
-    #     dt=dt.replace(day=30)
-    if dt.month > 1:
-        onemo = dt.replace(month=dt.month - 1)
-    else:
-        onemo = dt.replace(year=dt.year - 1)
+    onemo = today - relativedelta(months=1)
+    sixmo = today - relativedelta(months=6)
+    oneyr = today - relativedelta(years=1)
+    twoyr = today - relativedelta(years=2)
 
-        onemo = onemo.replace(month=12)
-
-    if dt.month > 6:
-        sixmo = dt.replace(month=dt.month - 6)
-
-    else:
-        sixmo = dt.replace(year=dt.year - 1)
-        left = 6 - sixmo.month
-        sixmo = sixmo.replace(month=12 - left)
-
-    dat = date(dt.year, dt.month, dt.day)
-    # results = gnf.query(myquery, after=dat)
     st.write('&nbsp;')  # empty line
+
+    # Keep plain option values for reliable comparisons
+    timeframe_options = [
+        "1 Week ago",
+        "1 Month ago",
+        "6 Months ago",
+        "1 year ago",
+        "2 years ago",
+    ]
+
+    timeframe_captions = [
+        f"{onewk.strftime('%d/%m/%Y')} to {today.strftime('%d/%m/%Y')}",
+        f"{onemo.strftime('%d/%m/%Y')} to {today.strftime('%d/%m/%Y')}",
+        f"{sixmo.strftime('%d/%m/%Y')} to {today.strftime('%d/%m/%Y')}",
+        f"{oneyr.strftime('%d/%m/%Y')} to {today.strftime('%d/%m/%Y')}",
+        f"{twoyr.strftime('%d/%m/%Y')} to {today.strftime('%d/%m/%Y')}",
+    ]
+
     st.session_state.timeframe = st.radio(
         "**Retrieve articles published/updated between now and which start date?**",
-        ["1 Week ago","1 Month ago", ":rainbow[6 Months ago]", "1 year ago", "2 years ago"], index=2,
-        captions=[onewk.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'),onemo.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'),sixmo.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), oneyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y'), twoyr.strftime('%d/%m/%Y')+ " to " + dt.strftime('%d/%m/%Y')])
-    #
-    if st.session_state.timeframe == "6 Months ago":
-        st.session_state.dates=sixmo
-    elif st.session_state.timeframe == "1 Week ago":
-        st.session_state.dates = onewk
-    elif st.session_state.timeframe == "1 Month ago":
-        st.session_state.dates = onemo
-    elif st.session_state.timeframe == "2 years ago":
-        st.session_state.dates = twoyr
-    else:
-        st.session_state.dates = oneyr
+        timeframe_options,
+        index=2,  # default to 6 months
+        captions=timeframe_captions,
+    )
+
+    # Robust mapping avoids string mismatch bugs
+    timeframe_to_date = {
+        "1 Week ago": onewk,
+        "1 Month ago": onemo,
+        "6 Months ago": sixmo,
+        "1 year ago": oneyr,
+        "2 years ago": twoyr,
+    }
+    st.session_state.dates = timeframe_to_date[st.session_state.timeframe]
+
     st.write('&nbsp;')  # empty line
     st.session_state.fulltexts = st.radio(
         "**Scrape full text for all articles?**",
-        [":rainbow[Yes]", "No"], index=0)
+        [":rainbow[Yes]", "No"],
+        index=0
+    )
+
     st.write('&nbsp;')  # empty line
-    st.session_state.num_ret = st.slider("**How many articles should be retrieved per query?**", 1, 100, 50)
+    st.session_state.num_ret = st.slider(
+        "**How many articles should be retrieved per query?**",
+        1, 100, 50
+    )
 
 def ris_converter():
     ############################variables
